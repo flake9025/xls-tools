@@ -12,8 +12,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellType;
-import org.apache.poi.ss.usermodel.CellValue;
+import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -29,6 +28,8 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class XLSUtils {
+
+    private static DataFormatter objDefaultFormat = new DataFormatter();
 
     // ===========================================================
     // Constructors
@@ -120,44 +121,10 @@ public class XLSUtils {
      * @return the cell value
      */
     public static String getCellValue(final FormulaEvaluator evaluator, final Cell cell) {
-        String cellValue = null;
-        CellType cellType = cell.getCellType();
-        if (evaluator != null) {
-            CellValue value = evaluator.evaluate(cell);
-            if (value == null) {
-                cellType = cell.getCellType();
-            } else {
-                cellType = value.getCellType();
-            }
-        }
-
-        switch (cellType) {
-        case STRING:
-            // line breaks are causing problems when reading file with spring batch
-            cellValue = cell.getStringCellValue().replaceAll("\\r\\n|\\r|\\n", "<br>").replaceAll("\\s+$", "");
-            break;
-        case NUMERIC:
-            // using NUMERIC instead of toString() will catch differences like 2 and 2.0
-            cellValue = Double.toString(cell.getNumericCellValue());
-            break;
-        case BOOLEAN:
-            cellValue = Boolean.toString(cell.getBooleanCellValue());
-            break;
-        case BLANK:
-            cellValue = "";
-            break;
-        case ERROR:
-            XLSUtils.log.warn("getCellValue : error for cell(row={}, col={})", cell.getRow().getRowNum(),
-                        cell.getColumnIndex());
-            cellValue = "";
-            break;
-        default:
-            XLSUtils.log.warn("Unknown cell type : {} for cell(row={}, col={})", cellType, cell.getRow().getRowNum(),
-                        cell.getColumnIndex());
-            cellValue = "";
-            break;
-        }
-        return cellValue;
+        // This will evaluate the cell, And any type of cell will return string value
+        evaluator.evaluate(cell);
+        // get original string
+        return XLSUtils.objDefaultFormat.formatCellValue(cell, evaluator);
     }
 
     /**
