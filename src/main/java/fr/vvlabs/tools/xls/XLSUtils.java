@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.DataFormatter;
@@ -29,7 +30,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class XLSUtils {
 
-    private static DataFormatter objDefaultFormat = new DataFormatter();
+    // Use US format to replace commas with points (useful for java numbers)
+    private static DataFormatter objDefaultFormat = new DataFormatter(Locale.US, true);
 
     // ===========================================================
     // Constructors
