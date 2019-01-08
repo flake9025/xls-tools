@@ -213,4 +213,35 @@ public class XLSUtils {
         XLSUtils.log.debug("result = {}", result);
         return result;
     }
+
+    /**
+     * Extract line data.
+     *
+     * @param inputXlsFile
+     *            the input xls file
+     * @param lineNumber
+     *            the line number
+     * @return the list
+     * @throws IOException
+     *             Signals that an I/O exception has occurred.
+     */
+    public static List<String> extractLine(final Path inputXlsFile, final int lineNumber) throws IOException {
+        XLSUtils.log.debug("extractLine: path={}, lineNumber={}", inputXlsFile.getFileName(), lineNumber);
+
+        List<String> dataLine = null;
+        try (
+                    // Get Input Stream
+                    InputStream xlsInputStream = Files.newInputStream(inputXlsFile);
+                    // Read file as workbook
+                    Workbook xlsWorkbook = WorkbookFactory.create(xlsInputStream);) {
+
+            FormulaEvaluator evaluator = xlsWorkbook.getCreationHelper().createFormulaEvaluator();
+            // Read the first worksheet
+            Sheet xlsSheet = xlsWorkbook.getSheetAt(0);
+
+            Row row = xlsSheet.getRow(lineNumber);
+            dataLine = extractLine(row, evaluator);
+        }
+        return dataLine;
+    }
 }
