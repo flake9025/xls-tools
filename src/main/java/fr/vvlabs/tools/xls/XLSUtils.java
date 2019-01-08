@@ -94,7 +94,7 @@ public class XLSUtils {
      * @param evaluator
      * @return the list
      */
-    public static List<String> extractLine(final Row row, final FormulaEvaluator evaluator) {
+    private static List<String> extractLine(final Row row, final FormulaEvaluator evaluator) {
 
         List<String> dataLine = new ArrayList<>();
 
@@ -120,11 +120,48 @@ public class XLSUtils {
      *            the cell
      * @return the cell value
      */
-    public static String getCellValue(final FormulaEvaluator evaluator, final Cell cell) {
+    private static String getCellValue(final FormulaEvaluator evaluator, final Cell cell) {
         // This will evaluate the cell, And any type of cell will return string value
         evaluator.evaluate(cell);
         // get original string
         return XLSUtils.objDefaultFormat.formatCellValue(cell, evaluator);
+    }
+
+    /**
+     * Gets the cell value.
+     *
+     * @param inputXlsFile
+     *            the input xls file
+     * @param lineNumber
+     *            the line number
+     * @param cellNumber
+     *            the cell number
+     * @return the cell value
+     * @throws IOException
+     *             Signals that an I/O exception has occurred.
+     */
+    public static String getCellValue(final Path inputXlsFile, final int lineNumber, final int cellNumber)
+                throws IOException {
+
+        XLSUtils.log.debug("getCellValue: path={}, lineNumber={}, cellNumber={}", inputXlsFile.getFileName(),
+                    lineNumber, cellNumber);
+
+        String cellValue = null;
+        try (
+                    // Get Input Stream
+                    InputStream xlsInputStream = Files.newInputStream(inputXlsFile);
+                    // Read file as workbook
+                    Workbook xlsWorkbook = WorkbookFactory.create(xlsInputStream);) {
+
+            FormulaEvaluator evaluator = xlsWorkbook.getCreationHelper().createFormulaEvaluator();
+            // Read the first worksheet
+            Sheet xlsSheet = xlsWorkbook.getSheetAt(0);
+
+            Row row = xlsSheet.getRow(lineNumber);
+            Cell cell = row.getCell(cellNumber);
+            cellValue = getCellValue(evaluator, cell);
+        }
+        return cellValue;
     }
 
     /**
