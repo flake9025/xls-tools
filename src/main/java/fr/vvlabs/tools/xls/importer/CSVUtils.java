@@ -1,4 +1,4 @@
-package fr.vvlabs.tools.xls;
+package fr.vvlabs.tools.xls.importer;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -9,9 +9,6 @@ import com.opencsv.CSVReader;
 
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * The Class CSVUtils.
- */
 @Slf4j
 public class CSVUtils {
 	

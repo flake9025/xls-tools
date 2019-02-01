@@ -1,7 +1,8 @@
-package fr.vvlabs.tools.xls;
+package fr.vvlabs.tools.xls.importer;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,7 +31,17 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class XLSUtils {
 
-    // Use US format to replace commas with points (useful for java numbers)
+	// ===========================================================
+	// Constants
+	// ===========================================================
+	
+    private static final String XLS_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    
+	// ===========================================================
+	// Fields
+	// ===========================================================
+
+	// Use US format to replace commas with points (useful for java numbers)
     private static DataFormatter objDefaultFormat = new DataFormatter(Locale.US, true);
 
     // ===========================================================
@@ -45,6 +56,32 @@ public class XLSUtils {
     // Methods
     // ===========================================================
 
+    /**
+     * Checks if the file is an excel file.
+     *
+     * @param path
+     *            the path
+     * @return true, if is excel file
+     */
+    public static boolean isExcelFile(final Path path) {
+        try {
+            String contentType = Files.probeContentType(path);
+            if (contentType == null) {
+                // Use alternative method by file name
+                contentType = URLConnection.guessContentTypeFromName(path.toFile().getName());
+                if (contentType == null) {
+                    // Use alternative method by file content
+                    contentType = URLConnection.guessContentTypeFromStream(Files.newInputStream(path));
+                }
+            }
+            
+            return contentType != null && contentType.equals(XLS_CONTENT_TYPE);
+        } catch (IOException e) {
+            XLSUtils.log.error("isExcelFile: error={}", e.getMessage());
+            return false;
+        }
+    }
+    
     /**
      * Convert an XLS file to CSV file.
      *
