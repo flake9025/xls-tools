@@ -7,94 +7,78 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import lombok.Data;
+import fr.vvlabs.tools.xls.exporter.dto.ExportParamsDto;
+import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
-@Data
+@Slf4j
+@NoArgsConstructor
 public class CSVExportHelper extends BaseExportHelper {
-    
-    // ===========================================================
-    // Constants
-    // ===========================================================
 
-    protected static final Logger logger = LoggerFactory.getLogger(CSVExportHelper.class);
-    
-    private static final String RECORD_SEPARATOR = "\r\n";
+	// ===========================================================
+	// Constants
+	// ===========================================================
 
-    // ===========================================================
-    // Fields
-    // ===========================================================
-    
-    private char recordDelimiter = ';';
-    
-    // ===========================================================
-    // Constructors
-    // ===========================================================
-    
-    public CSVExportHelper(String recordDelimiter) {
-        if(StringUtils.isNotBlank(recordDelimiter)) {
-            this.recordDelimiter = recordDelimiter.charAt(0);
-        }
-    }
-    
-    // ===========================================================
-    // Methods for/from SuperClass/Interfaces
-    // ===========================================================
-    
-    @Override
-    public void export(ExportParams exportParams, List<?> data) {
-        Writer fileWriter = null;
-        CSVPrinter csvFilePrinter = null;
+	private static final char RECORD_DELIMITER = ';';
+	private static final String RECORD_SEPARATOR = "\r\n";
 
-        // Create the CSVFormat object with ";" as a record delimiter
-        CSVFormat csvFileFormat = CSVFormat.DEFAULT.withDelimiter(recordDelimiter).withRecordSeparator(RECORD_SEPARATOR);
+	// ===========================================================
+	// Fields
+	// ===========================================================
 
-        try {
-            // create temporaryFile
-            File exportFile = File.createTempFile(exportParams.getFileName(), exportParams.getFileFormat());
-            exportFile.deleteOnExit();
-            // expose temporary file information (used for file downloading...)
-            this.setFileName(exportFile.getName());
-            //TODO add variable
-            // ExportedFilePath = temp/sub_temp/admin3456544.csv
-            //   "temp" is for the servlet mapping in web.xml.
-            //   "sub_temp" is for the method mapping in FileDownloadController.
-            this.setFilePath(exportFile.getName());
-            this.setFile(exportFile);
+	private char recordDelimiter = RECORD_DELIMITER;
+	private String recordSeparator = RECORD_SEPARATOR;
 
-            // initialize FileWriter object - IO 8859-1 for french excel users !
-            fileWriter = new OutputStreamWriter(new FileOutputStream(exportFile), StandardCharsets.ISO_8859_1); //new FileWriter(exportFile);
+	// ===========================================================
+	// Constructors
+	// ===========================================================
 
-            // initialize CSVPrinter object
-            csvFilePrinter = new CSVPrinter(fileWriter, csvFileFormat);
+	public CSVExportHelper(String recordDelimiter, String recordSeparator) {
+		if (StringUtils.isNotBlank(recordDelimiter)) {
+			this.recordDelimiter = recordDelimiter.charAt(0);
+		}
+		if (StringUtils.isNotBlank(recordSeparator)) {
+			this.recordSeparator = recordSeparator;
+		}
+	}
 
-            // Create header with fields names
-            List<String> columnNames = exportParams.getColumns().stream().map(column -> column.getHeader()).collect(Collectors.toList());
-            csvFilePrinter.printRecord(columnNames);
+	// ===========================================================
+	// Methods for/from SuperClass/Interfaces
+	// ===========================================================
 
-            // Create data lines
-            List<List<String>> dataLines = getDataLines(exportParams, data);
-            for(List<String> dataLine : dataLines) {
-                csvFilePrinter.printRecord(dataLine);
-            }
-            
-        } catch (IOException e) {
-            logger.error("export() KO : " + e.getMessage(), e);
-        } finally {
-            try {
-                fileWriter.flush();
-                fileWriter.close();
-                csvFilePrinter.close();
-            } catch (IOException e) {
-                logger.error("export() KO : " + e.getMessage(), e);
-            }
-        }
-    }
+	@Override
+	public File export(ExportParamsDto exportParams, List<?> data) throws IOException {
+
+		// create temporaryFile
+		File exportFile = File.createTempFile(exportParams.getFileName(), ".csv");
+		exportFile.deleteOnExit();
+
+		// Create the CSVFormat object with custom record delimiter and separator
+		CSVFormat csvFileFormat = CSVFormat.DEFAULT.withDelimiter(recordDelimiter).withRecordSeparator(recordSeparator);
+
+		try (Writer fileWriter = new OutputStreamWriter(new FileOutputStream(exportFile), StandardCharsets.UTF_8); //
+				CSVPrinter csvFilePrinter = new CSVPrinter(fileWriter, csvFileFormat);) {
+
+			// Create header with fields names
+			List<String> columnNames = getHeadersLine(exportParams);
+			csvFilePrinter.printRecord(columnNames);
+
+			// Create data lines
+			List<List<String>> dataLines = getDataLines(exportParams, data);
+			for (List<String> dataLine : dataLines) {
+				csvFilePrinter.printRecord(dataLine);
+			}
+
+		} catch (IOException e) {
+			log.error("export() KO : " + e.getMessage(), e);
+			throw e;
+		}
+		
+		return exportFile;
+	}
 }
