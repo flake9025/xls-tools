@@ -3,14 +3,16 @@ package fr.vvlabs.tools.xls.exporter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import org.apache.poi.hssf.usermodel.HSSFCell;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 
-import fr.vvlabs.tools.xls.exporter.dto.ExportParamsDto;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -21,10 +23,11 @@ public class XLSExportHelper extends BaseExportHelper {
 	// ===========================================================
 
 	@Override
-	public File export(ExportParamsDto exportParams, List<?> data) throws IOException {
+	public File export(Map<String, String> columnsMappings, List<?> data) throws IOException {
 
 		// create temporaryFile
-		File exportFile = File.createTempFile(exportParams.getFileName(), ".xls");
+		String fileName = LocalDate.now().toString() + "_" + UUID.randomUUID().toString();
+		File exportFile = File.createTempFile(fileName, ".xls");
 		exportFile.deleteOnExit();
 
 		try (HSSFWorkbook workbook = new HSSFWorkbook(); //
@@ -34,10 +37,10 @@ public class XLSExportHelper extends BaseExportHelper {
 			HSSFSheet sheet = workbook.createSheet("Inventory");
 
 			// Create header with fields names
-			printHeaderLine(sheet, exportParams);
+			printHeaderLine(sheet, columnsMappings);
 
 			// Create data lines
-			List<List<String>> dataLines = getDataLines(exportParams, data);
+			List<List<String>> dataLines = getDataLines(columnsMappings, data);
 			int lineNumber = 1;
 			for (List<String> dataLine : dataLines) {
 				printDataLine(sheet, lineNumber, dataLine);
@@ -59,9 +62,9 @@ public class XLSExportHelper extends BaseExportHelper {
 	 * @param sheet        the sheet
 	 * @param exportParams the export params
 	 */
-	private void printHeaderLine(HSSFSheet sheet, ExportParamsDto exportParams) {
+	private void printHeaderLine(HSSFSheet sheet, Map<String, String> columnsMappings) {
 		HSSFRow headerLine = sheet.createRow(0);
-		List<String> columnNames = getHeadersLine(exportParams);
+		List<String> columnNames = getHeadersLine(columnsMappings);
 		for (int i = 0; i < columnNames.size(); i++) {
 			addCell(headerLine, i, columnNames.get(i));
 		}

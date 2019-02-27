@@ -5,29 +5,24 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.junit.Before;
 import org.junit.Test;
 
-import fr.vvlabs.tools.xls.exporter.dto.ExportParamsDto;
 import fr.vvlabs.tools.xls.exporter.mocks.FamilleMock;
 import fr.vvlabs.tools.xls.exporter.mocks.ProtectionMock;
 import fr.vvlabs.tools.xls.exporter.mocks.ProtectionStatutMock;
 import fr.vvlabs.tools.xls.exporter.mocks.ProtectionTypeMock;
-import fr.vvlabs.tools.xls.importer.FileUtils;
 import fr.vvlabs.tools.xls.importer.XLSUtils;
 
 public class XLSExportHelperTest {
 
 	private XLSExportHelper xlsExportHelper;
-	private ExportParamsDto exportParamsDto;
+	
 	private List<FamilleMock> dataFamilles;
 	private FamilleMock famille1;
 	private List<ProtectionMock> dataProtections;
@@ -37,9 +32,6 @@ public class XLSExportHelperTest {
 	public void setup() {
 		xlsExportHelper = new XLSExportHelper();
 		
-		exportParamsDto = new ExportParamsDto();
-		exportParamsDto.setFileName("testExport");
-		exportParamsDto.setFilePath("/test/java/test_export.xlsx");
 		
 		dataFamilles = new ArrayList<>();
 		famille1 = new FamilleMock();
@@ -68,15 +60,14 @@ public class XLSExportHelperTest {
 	public void testExportFamilles() {
 		
 		try {
-			Map<String, String> famillesMapping = new LinkedHashMap<>();
+			LinkedHashMap<String, String> famillesMapping = new LinkedHashMap<>();
 			famillesMapping.put("UUID", "uuid");
 			famillesMapping.put("ID", "familleID");
 			famillesMapping.put("Abstract", "abstractSummary");
 			famillesMapping.put("Reference", "familleCleClient");
 			famillesMapping.put("Creation Date", "familyCreationDate");
-			exportParamsDto.setColumnsMappings(famillesMapping);
 			
-			File exportFile = xlsExportHelper.export(exportParamsDto, dataFamilles);
+			File exportFile = xlsExportHelper.export(famillesMapping, dataFamilles);
 			assertTrue(exportFile.exists());
 			
 			List<String> headers = XLSUtils.extractLine(exportFile.toPath(), 0);
@@ -93,7 +84,7 @@ public class XLSExportHelperTest {
 	public void testExportProtections() {
 		
 		try {
-			Map<String, String> protectionsMapping = new LinkedHashMap<>();
+			LinkedHashMap<String, String> protectionsMapping = new LinkedHashMap<>();
 			protectionsMapping.put("UUID", "uuid");
 			protectionsMapping.put("Depot Number", "depotNumber");
 			protectionsMapping.put("Depot Date", "depotDate");
@@ -101,9 +92,8 @@ public class XLSExportHelperTest {
 			protectionsMapping.put("Type", "type");
 			protectionsMapping.put("Sous-Type", "sousType");
 			protectionsMapping.put("Statut", "statut");
-			exportParamsDto.setColumnsMappings(protectionsMapping);
 			
-			File exportFile = xlsExportHelper.export(exportParamsDto, dataProtections);
+			File exportFile = xlsExportHelper.export(protectionsMapping, dataProtections);
 			assertTrue(exportFile.exists());
 			
 			List<String> headers = XLSUtils.extractLine(exportFile.toPath(), 0);

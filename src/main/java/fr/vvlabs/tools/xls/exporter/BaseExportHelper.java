@@ -2,16 +2,15 @@ package fr.vvlabs.tools.xls.exporter;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.annotation.Annotation;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.beanutils.BeanUtils;
 
-import fr.vvlabs.tools.xls.exporter.dto.ExportParamsDto;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,7 +37,7 @@ public abstract class BaseExportHelper {
 	 * @param exportParams the export params
 	 * @param data         the data
 	 */
-	public abstract File export(ExportParamsDto exportParams, List<?> data) throws IOException;
+	public abstract File export(Map<String, String> columnsMappings, List<?> data) throws IOException;
 
 	/**
 	 * Gets the headers line.
@@ -46,8 +45,8 @@ public abstract class BaseExportHelper {
 	 * @param exportParams the export params
 	 * @return the headers line
 	 */
-	protected List<String> getHeadersLine(ExportParamsDto exportParams) {
-		return new ArrayList<>(exportParams.getColumnsMappings().keySet());
+	protected List<String> getHeadersLine(Map<String, String> columnsMappings) {
+		return new ArrayList<>(columnsMappings.keySet());
 	}
 
 	/**
@@ -57,12 +56,12 @@ public abstract class BaseExportHelper {
 	 * @param objectsToExport the objects to export
 	 * @return the data lines
 	 */
-	protected List<List<String>> getDataLines(ExportParamsDto exportParams, List<?> objectsToExport) {
+	protected List<List<String>> getDataLines(Map<String, String> columnsMappings, List<?> objectsToExport) {
 		List<List<String>> dataLines = new ArrayList<>();
-		if (exportParams != null && objectsToExport != null) {
+		if (columnsMappings != null && objectsToExport != null) {
 			log.trace("getDataLines() start...");
 			for (Object objectToExport : objectsToExport) {
-				dataLines.add(getDataLine(exportParams, objectToExport));
+				dataLines.add(getDataLine(columnsMappings, objectToExport));
 			}
 		}
 		return dataLines;
@@ -71,50 +70,60 @@ public abstract class BaseExportHelper {
 	/**
 	 * Gets the data line.
 	 *
-	 * @param exportParams   the export params
+	 * @param columnsMappings the columns mappings
 	 * @param objectToExport the object to export
 	 * @return the data line
 	 */
-	protected List<String> getDataLine(ExportParamsDto exportParams, Object objectToExport) {
-		if (objectToExport == null || exportParams == null)
-			return null;
-
+	protected List<String> getDataLine(Map<String, String> columnsMappings, Object objectToExport) {
 		List<String> dataLine = new ArrayList<>();
-
-		// iterate over column names
-		for (String column : exportParams.getColumnsMappings().values()) {
-			String[] path = column.split("\\.");
-			log.trace("getDataLine() currentColumn={} , path={}", column, path);
-
-			// retrieve matching field recursively
-			Object currentObject = objectToExport;
-			for (String field : path) {
-				if (currentObject != null) {
-					log.trace("getDataLine() currentObject={}, field={}", currentObject.getClass().getSimpleName(),
-							field);
-					currentObject = getFieldValue(currentObject, field);
-				} else {
-					log.trace("getDataLine() currentObject is null, stop the loop");
-					break;
+		
+		if (objectToExport != null && columnsMappings != null) {
+			// iterate over column names
+			for (String column : columnsMappings.values()) {
+				String[] path = column.split("\\.");
+				log.trace("getDataLine() currentColumn={} , path={}", column, path);
+	
+				// retrieve matching field recursively
+				Object currentObject = objectToExport;
+				for (String field : path) {
+					if (currentObject != null) {
+						log.trace("getDataLine() currentObject={}, field={}", currentObject.getClass().getSimpleName(),
+								field);
+						currentObject = getFieldValue(currentObject, field);
+					} else {
+						log.trace("getDataLine() currentObject is null, stop the loop");
+						break;
+					}
 				}
-			}
-			if (currentObject != null) {
-				log.trace("getDataLine() currentObject={}, value={}", currentObject.getClass().getSimpleName(),
-						currentObject.toString());
-				if (currentObject instanceof Date) {
-					// format dates
-					dataLine.add(dateFormatter.format(currentObject));
-				} else {
-					// just use toString
-					dataLine.add(currentObject.toString());
-				}
-			} else {
-				log.trace("getDataLine() currentObject null !");
-				dataLine.add("");
+				getDataForObject(dataLine, currentObject);
 			}
 		}
 		log.trace("getDataLine() result={}", Arrays.toString(dataLine.toArray()));
 		return dataLine;
+	}
+
+	/**
+	 * Gets the data for object.
+	 *
+	 * @param dataLine the data line
+	 * @param currentObject the current object
+	 * @return the data for object
+	 */
+	private void getDataForObject(List<String> dataLine, Object currentObject) {
+		if (currentObject != null) {
+			log.trace("getDataLine() currentObject={}, value={}", currentObject.getClass().getSimpleName(),
+					currentObject.toString());
+			if (currentObject instanceof Date) {
+				// format dates
+				dataLine.add(dateFormatter.format(currentObject));
+			} else {
+				// just use toString
+				dataLine.add(currentObject.toString());
+			}
+		} else {
+			log.trace("getDataLine() currentObject null !");
+			dataLine.add("");
+		}
 	}
 
 	/**
@@ -141,27 +150,5 @@ public abstract class BaseExportHelper {
 		log.trace("getFieldValue() result class={}, value={}", value != null ? value.getClass().getSimpleName() : null,
 				value);
 		return value;
-	}
-
-	/**
-	 * Gets the annotation.
-	 *
-	 * @param                <T> the generic type
-	 * @param clazz          the clazz
-	 * @param annotationType the annotation type
-	 * @return the annotation
-	 */
-	public static <T extends Annotation> T getAnnotation(Class<?> clazz, Class<T> annotationType) {
-		T result = clazz.getAnnotation(annotationType);
-		if (result == null) {
-			Class<?> superclass = clazz.getSuperclass();
-			if (superclass != null) {
-				return getAnnotation(superclass, annotationType);
-			} else {
-				return null;
-			}
-		} else {
-			return result;
-		}
 	}
 }

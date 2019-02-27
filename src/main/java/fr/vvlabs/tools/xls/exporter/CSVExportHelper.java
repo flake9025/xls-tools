@@ -6,13 +6,15 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.lang3.StringUtils;
 
-import fr.vvlabs.tools.xls.exporter.dto.ExportParamsDto;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -52,10 +54,11 @@ public class CSVExportHelper extends BaseExportHelper {
 	// ===========================================================
 
 	@Override
-	public File export(ExportParamsDto exportParams, List<?> data) throws IOException {
+	public File export(Map<String, String> columnsMappings, List<?> data) throws IOException {
 
 		// create temporaryFile
-		File exportFile = File.createTempFile(exportParams.getFileName(), ".csv");
+		String fileName = LocalDate.now().toString() + "_" + UUID.randomUUID().toString();
+		File exportFile = File.createTempFile(fileName, ".csv");
 		exportFile.deleteOnExit();
 
 		// Create the CSVFormat object with custom record delimiter and separator
@@ -65,11 +68,11 @@ public class CSVExportHelper extends BaseExportHelper {
 				CSVPrinter csvFilePrinter = new CSVPrinter(fileWriter, csvFileFormat);) {
 
 			// Create header with fields names
-			List<String> columnNames = getHeadersLine(exportParams);
+			List<String> columnNames = getHeadersLine(columnsMappings);
 			csvFilePrinter.printRecord(columnNames);
 
 			// Create data lines
-			List<List<String>> dataLines = getDataLines(exportParams, data);
+			List<List<String>> dataLines = getDataLines(columnsMappings, data);
 			for (List<String> dataLine : dataLines) {
 				csvFilePrinter.printRecord(dataLine);
 			}
