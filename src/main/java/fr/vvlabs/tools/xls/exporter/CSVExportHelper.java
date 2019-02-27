@@ -1,87 +1,89 @@
 package fr.vvlabs.tools.xls.exporter;
 
+import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.lang3.StringUtils;
 
+import com.opencsv.CSVWriter;
+
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@Data
+@EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 public class CSVExportHelper extends BaseExportHelper {
 
-	// ===========================================================
-	// Constants
-	// ===========================================================
+    // ===========================================================
+    // Constants
+    // ===========================================================
 
-	private static final char RECORD_DELIMITER = ';';
-	private static final String RECORD_SEPARATOR = "\r\n";
+    private static final char RECORD_DELIMITER = ';';
+    private static final String RECORD_SEPARATOR = "\r\n";
 
-	// ===========================================================
-	// Fields
-	// ===========================================================
+    // ===========================================================
+    // Fields
+    // ===========================================================
 
-	private char recordDelimiter = RECORD_DELIMITER;
-	private String recordSeparator = RECORD_SEPARATOR;
+    private char recordDelimiter = CSVExportHelper.RECORD_DELIMITER;
+    private String recordSeparator = CSVExportHelper.RECORD_SEPARATOR;
 
-	// ===========================================================
-	// Constructors
-	// ===========================================================
+    // ===========================================================
+    // Constructors
+    // ===========================================================
 
-	public CSVExportHelper(String recordDelimiter, String recordSeparator) {
-		if (StringUtils.isNotBlank(recordDelimiter)) {
-			this.recordDelimiter = recordDelimiter.charAt(0);
-		}
-		if (StringUtils.isNotBlank(recordSeparator)) {
-			this.recordSeparator = recordSeparator;
-		}
-	}
+    public CSVExportHelper(final String recordDelimiter,
+                final String recordSeparator) {
+        if (StringUtils.isNotBlank(recordDelimiter)) {
+            this.recordDelimiter = recordDelimiter.charAt(0);
+        }
+        if (StringUtils.isNotBlank(recordSeparator)) {
+            this.recordSeparator = recordSeparator;
+        }
+    }
 
-	// ===========================================================
-	// Methods for/from SuperClass/Interfaces
-	// ===========================================================
+    // ===========================================================
+    // Methods for/from SuperClass/Interfaces
+    // ===========================================================
 
-	@Override
-	public File export(Map<String, String> columnsMappings, List<?> data) throws IOException {
+    @Override
+    public File export(final Map<String, String> columnsMappings, final List<?> data) throws IOException {
 
-		// create temporaryFile
-		String fileName = LocalDate.now().toString() + "_" + UUID.randomUUID().toString();
-		File exportFile = File.createTempFile(fileName, ".csv");
-		exportFile.deleteOnExit();
+        // create temporaryFile
+        String fileName = LocalDate.now().toString() + "_" + UUID.randomUUID().toString();
+        File exportFile = File.createTempFile(fileName, ".csv");
+        exportFile.deleteOnExit();
 
-		// Create the CSVFormat object with custom record delimiter and separator
-		CSVFormat csvFileFormat = CSVFormat.DEFAULT.withDelimiter(recordDelimiter).withRecordSeparator(recordSeparator);
+        // Create the CSVFormat object with custom record delimiter and separator
+        try (BufferedWriter writer = Files.newBufferedWriter(exportFile.toPath());
+                    CSVWriter csvWriter = new CSVWriter(writer, this.recordDelimiter, CSVWriter.NO_QUOTE_CHARACTER,
+                                CSVWriter.DEFAULT_ESCAPE_CHARACTER, this.recordSeparator);) {
 
-		try (Writer fileWriter = new OutputStreamWriter(new FileOutputStream(exportFile), StandardCharsets.UTF_8); //
-				CSVPrinter csvFilePrinter = new CSVPrinter(fileWriter, csvFileFormat);) {
+            // Create header with fields names
+            List<String> columnNames = getHeadersLine(columnsMappings);
+            csvWriter.writeNext(columnNames.stream().toArray(String[]::new));
 
-			// Create header with fields names
-			List<String> columnNames = getHeadersLine(columnsMappings);
-			csvFilePrinter.printRecord(columnNames);
+            // Create data lines
+            List<List<String>> dataLines = getDataLines(columnsMappings, data);
+            for (List<String> dataLine : dataLines) {
+                csvWriter.writeNext(dataLine.stream().toArray(String[]::new));
+            }
 
-			// Create data lines
-			List<List<String>> dataLines = getDataLines(columnsMappings, data);
-			for (List<String> dataLine : dataLines) {
-				csvFilePrinter.printRecord(dataLine);
-			}
+        } catch (IOException e) {
+            CSVExportHelper.log.error("export() KO : " + e.getMessage(), e);
+            throw e;
+        }
 
-		} catch (IOException e) {
-			log.error("export() KO : " + e.getMessage(), e);
-			throw e;
-		}
-		
-		return exportFile;
-	}
+        return exportFile;
+    }
 }
