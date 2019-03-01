@@ -2,14 +2,13 @@ package fr.vvlabs.tools.xls.exporter;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.commons.beanutils.BeanUtils;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -56,8 +55,8 @@ public abstract class BaseExportHelper {
 	 * @param objectsToExport the objects to export
 	 * @return the data lines
 	 */
-	protected List<List<String>> getDataLines(Map<String, String> columnsMappings, List<?> objectsToExport) {
-		List<List<String>> dataLines = new ArrayList<>();
+	protected List<List<Object>> getDataLines(Map<String, String> columnsMappings, List<?> objectsToExport) {
+		List<List<Object>> dataLines = new ArrayList<>();
 		if (columnsMappings != null && objectsToExport != null) {
 			log.trace("getDataLines() start...");
 			for (Object objectToExport : objectsToExport) {
@@ -74,8 +73,8 @@ public abstract class BaseExportHelper {
 	 * @param objectToExport the object to export
 	 * @return the data line
 	 */
-	protected List<String> getDataLine(Map<String, String> columnsMappings, Object objectToExport) {
-		List<String> dataLine = new ArrayList<>();
+	protected List<Object> getDataLine(Map<String, String> columnsMappings, Object objectToExport) {
+		List<Object> dataLine = new ArrayList<>();
 		
 		if (objectToExport != null && columnsMappings != null) {
 			// iterate over column names
@@ -109,13 +108,15 @@ public abstract class BaseExportHelper {
 	 * @param currentObject the current object
 	 * @return the data for object
 	 */
-	private void getDataForObject(List<String> dataLine, Object currentObject) {
+	private void getDataForObject(List<Object> dataLine, Object currentObject) {
 		if (currentObject != null) {
 			log.trace("getDataLine() currentObject={}, value={}", currentObject.getClass().getSimpleName(),
 					currentObject.toString());
 			if (currentObject instanceof Date) {
 				// format dates
 				dataLine.add(dateFormatter.format(currentObject));
+            } else if (currentObject instanceof byte[]) {
+                dataLine.add(currentObject);
 			} else {
 				// just use toString
 				dataLine.add(currentObject.toString());
@@ -142,7 +143,9 @@ public abstract class BaseExportHelper {
 
 		Object value = null;
 		try {
-			value = BeanUtils.getProperty(objectToExport, fieldName);
+            Field field = objectToExport.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            value = field.get(objectToExport);
 		} catch (Exception e) {
 			log.error("getFieldValue() KO : " + e.getMessage(), e);
 		}

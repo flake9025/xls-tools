@@ -74,8 +74,8 @@ public class CSVExportHelper extends BaseExportHelper {
             csvWriter.writeNext(columnNames.stream().toArray(String[]::new));
 
             // Create data lines
-            List<List<String>> dataLines = getDataLines(columnsMappings, data);
-            for (List<String> dataLine : dataLines) {
+            List<List<Object>> dataLines = getDataLines(columnsMappings, data);
+            for (List<Object> dataLine : dataLines) {
                 csvWriter.writeNext(dataLine.stream().toArray(String[]::new));
             }
 
